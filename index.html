@@ -2,16 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" c        // Function to update the comparison view
-        function updateComparison() {
-            // Normalize line endings and split text into lines
-            const text1 = textInput1.value.replace(/\r\n/g, '\n').trim();
-            const text2 = textInput2.value.replace(/\r\n/g, '\n').trim();
-            
-            const lines1 = text1 ? text1.split('\n') : [];
-            const lines2 = text2 ? text2.split('\n') : [];
-            
-            const maxLines = Math.max(1, lines1.length, lines2.length);="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Line-by-Line Text Comparison</title>
     
     <!-- Tailwind CSS for styling -->
@@ -45,14 +36,42 @@
             left: 50%;
             transform: translateX(-50%);
             background-color: white;
-            border: 1px solid #e5e7eb;
+            border: 2px solid #94a3b8;
             border-radius: 0.5rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            max-width: 90%;
+            outline: 1px solid #e2e8f0;
+            outline-offset: -4px;
+            max-width: 95%;
             width: 900px;
             z-index: 50;
             opacity: 0;
             transition: opacity 0.2s ease-in-out;
+            font-size: 14px;
+        }
+        @media (max-width: 768px) {
+            #floatingPreview {
+                bottom: 10px;
+                font-size: 12px;
+            }
+            #floatingPreview table {
+                display: block;
+            }
+            #floatingPreview tr {
+                display: flex;
+                flex-direction: column;
+            }
+            #floatingPreview td {
+                display: block;
+                width: 100% !important;
+                border-left: none !important;
+                border-top: 1px solid #e5e7eb;
+            }
+            #floatingPreview td:first-child {
+                border-top: none;
+                background: #f9fafb;
+                text-align: center;
+                padding: 0.5rem;
+            }
         }
         #floatingPreview.visible {
             opacity: 1;
@@ -74,9 +93,9 @@
     </header>
 
     <!-- Main Content -->
-    <main class="p-4 sm:p-6 lg:p-8">
+    <main class="p-3 sm:p-6 lg:p-8">
         <!-- Control buttons -->
-        <div class="mb-4 flex gap-4 items-center">
+        <div class="mb-4 flex flex-wrap gap-2 sm:gap-4 items-center">
             <button onclick="toggleInputs()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition-colors">
                 Toggle Input Boxes
             </button>
@@ -97,7 +116,7 @@
             <!-- Left Column -->
             <div>
                 <div class="flex justify-between items-center mb-2">
-                    <h2 class="text-xl font-semibold">Text 1 (e.g., English)</h2>
+                    <h2 class="text-xl font-semibold">Text 1</h2>
                     <span id="lineCount1" class="text-sm text-gray-500">Lines: 0</span>
                 </div>
                 <textarea id="text1" class="w-full h-60 p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out mono-font text-sm" placeholder="Paste your first text here..."></textarea>
@@ -106,7 +125,7 @@
             <!-- Right Column -->
             <div>
                 <div class="flex justify-between items-center mb-2">
-                    <h2 class="text-xl font-semibold">Text 2 (e.g., Spanish)</h2>
+                    <h2 class="text-xl font-semibold">Text 2</h2>
                     <span id="lineCount2" class="text-sm text-gray-500">Lines: 0</span>
                 </div>
                 <textarea id="text2" class="w-full h-60 p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out mono-font text-sm" placeholder="Paste your second text here..."></textarea>
@@ -234,6 +253,36 @@ Pursuant to the authorization of the Director of Education and Religious Affairs
             
             const maxLines = Math.max(lines1.length, lines2.length);
             
+            // For mobile screens, create a stacked layout
+            const isMobile = window.innerWidth < 768;
+            
+            if (isMobile) {
+                let tableHTML = '<div class="space-y-4">';
+                for (let i = 0; i < maxLines; i++) {
+                    const line1 = lines1[i] || '';
+                    const line2 = lines2[i] || '';
+                    const isDifferent = line1 !== line2;
+                    const bgClass = isDifferent ? 'bg-yellow-50' : 'bg-white';
+                    
+                    tableHTML += `
+                        <div class="border rounded-lg ${bgClass} overflow-hidden">
+                            <div class="border-b p-2 bg-gray-50 text-sm font-semibold text-gray-600">Line ${i + 1}</div>
+                            <div class="p-3 border-b">
+                                <div class="text-xs text-gray-500 mb-1">Text 1:</div>
+                                <div class="mono-font text-sm break-words whitespace-pre-wrap">${escapeHtml(line1)}</div>
+                            </div>
+                            <div class="p-3">
+                                <div class="text-xs text-gray-500 mb-1">Text 2:</div>
+                                <div class="mono-font text-sm break-words whitespace-pre-wrap">${escapeHtml(line2)}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                tableHTML += '</div>';
+                return tableHTML;
+            }
+            
+            // For desktop, keep the table layout
             let tableHTML = '<table class="w-full table-fixed text-sm border-collapse">';
             tableHTML += `
                 <thead class="bg-gray-100 text-left">
@@ -339,21 +388,44 @@ Pursuant to the authorization of the Director of Education and Religious Affairs
             floatingPreview.classList.remove('hidden');
             floatingPreview.classList.add('visible');
 
-            // Hide the preview after 2 seconds of inactivity
+            // Keep preview visible while textarea is focused
             clearTimeout(previewTimeout);
-            previewTimeout = setTimeout(() => {
-                floatingPreview.classList.remove('visible');
-                setTimeout(() => floatingPreview.classList.add('hidden'), 200);
-            }, 2000);
         }
 
-        // Add input and selection event listeners for the preview
+        // Function to hide the preview
+        function hidePreview() {
+            floatingPreview.classList.remove('visible');
+            setTimeout(() => floatingPreview.classList.add('hidden'), 200);
+        }
+
+        // Function to handle textarea focus
+        function handleFocus(textarea) {
+            updateFloatingPreview(textarea);
+        }
+
+        // Function to handle textarea blur
+        function handleBlur() {
+            // Only hide if both textareas are not focused
+            setTimeout(() => {
+                if (!textInput1.matches(':focus') && !textInput2.matches(':focus')) {
+                    hidePreview();
+                }
+            }, 100);
+        }
+
+        // Add all event listeners
         textInput1.addEventListener('input', () => updateFloatingPreview(textInput1));
         textInput2.addEventListener('input', () => updateFloatingPreview(textInput2));
         textInput1.addEventListener('click', () => updateFloatingPreview(textInput1));
         textInput2.addEventListener('click', () => updateFloatingPreview(textInput2));
         textInput1.addEventListener('keyup', () => updateFloatingPreview(textInput1));
         textInput2.addEventListener('keyup', () => updateFloatingPreview(textInput2));
+        
+        // Add focus and blur listeners
+        textInput1.addEventListener('focus', () => handleFocus(textInput1));
+        textInput2.addEventListener('focus', () => handleFocus(textInput2));
+        textInput1.addEventListener('blur', handleBlur);
+        textInput2.addEventListener('blur', handleBlur);
 
         // Add event listeners to update the comparison and line counts on input
         textInput1.addEventListener('input', () => {
