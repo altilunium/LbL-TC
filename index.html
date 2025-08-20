@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" c        // Function to update the comparison view
+        function updateComparison() {
+            // Normalize line endings and split text into lines
+            const text1 = textInput1.value.replace(/\r\n/g, '\n').trim();
+            const text2 = textInput2.value.replace(/\r\n/g, '\n').trim();
+            
+            const lines1 = text1 ? text1.split('\n') : [];
+            const lines2 = text2 ? text2.split('\n') : [];
+            
+            const maxLines = Math.max(1, lines1.length, lines2.length);="width=device-width, initial-scale=1.0">
+    <title>Line-by-Line Text Comparison</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter for readability -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Custom styles for the app */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Tailwind gray-50 */
+        }
+        .mono-font {
+            font-family: 'Fira Code', monospace;
+        }
+        /* Custom word wrapping */
+        td.mono-font {
+            word-break: normal;
+            overflow-wrap: break-word;
+            hyphens: none;
+        }
+        /* Floating preview styles */
+        #floatingPreview {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            max-width: 90%;
+            width: 900px;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        #floatingPreview.visible {
+            opacity: 1;
+        }
+        #floatingPreview table {
+            margin: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <h1 class="text-2xl font-bold text-gray-900">Line-by-Line Text Comparison</h1>
+            <p class="text-gray-500 mt-1">Paste text in the boxes below to see a line-by-line comparison.</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="p-4 sm:p-6 lg:p-8">
+        <!-- Control buttons -->
+        <div class="mb-4 flex gap-4 items-center">
+            <button onclick="toggleInputs()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition-colors">
+                Toggle Input Boxes
+            </button>
+            <button onclick="exportToJson()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors">
+                Export to File
+            </button>
+            <div class="relative">
+                <input type="file" id="importFile" accept=".json" onchange="importFromJson(event)" class="hidden">
+                <button onclick="document.getElementById('importFile').click()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors">
+                    Import from File
+                </button>
+            </div>
+        </div>
+        
+        <!-- Input Grid -->
+        <div id="inputContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Left Column -->
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-xl font-semibold">Text 1 (e.g., English)</h2>
+                    <span id="lineCount1" class="text-sm text-gray-500">Lines: 0</span>
+                </div>
+                <textarea id="text1" class="w-full h-60 p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out mono-font text-sm" placeholder="Paste your first text here..."></textarea>
+            </div>
+
+            <!-- Right Column -->
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-xl font-semibold">Text 2 (e.g., Spanish)</h2>
+                    <span id="lineCount2" class="text-sm text-gray-500">Lines: 0</span>
+                </div>
+                <textarea id="text2" class="w-full h-60 p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out mono-font text-sm" placeholder="Paste your second text here..."></textarea>
+            </div>
+        </div>
+
+        <!-- Comparison Output -->
+        <div class="mt-8">
+            <h2 class="text-xl font-semibold mb-4">Comparison</h2>
+            <div id="comparison-output" class="bg-white border border-gray-200 rounded-lg shadow-sm">
+                <!-- Comparison table will be generated here by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Floating Preview -->
+        <div id="floatingPreview" class="hidden">
+            <table class="table-fixed text-sm border-collapse">
+                <tbody>
+                    <tr>
+                        <td class="p-2 text-gray-400 text-right align-top w-[50px] flex-shrink-0" id="previewLineNumber">0</td>
+                        <td class="p-2 border-l border-gray-200 mono-font break-words whitespace-pre-wrap w-1/2" id="previewText1"></td>
+                        <td class="p-2 border-l border-gray-200 mono-font break-words whitespace-pre-wrap w-1/2" id="previewText2"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        // Get references to DOM elements
+        const textInput1 = document.getElementById('text1');
+        const textInput2 = document.getElementById('text2');
+        const comparisonOutput = document.getElementById('comparison-output');
+        const lineCount1 = document.getElementById('lineCount1');
+        const lineCount2 = document.getElementById('lineCount2');
+
+        // Autosave functionality
+        function saveToLocalStorage() {
+            localStorage.setItem('text1', textInput1.value);
+            localStorage.setItem('text2', textInput2.value);
+        }
+
+        function loadFromLocalStorage() {
+            const savedText1 = localStorage.getItem('text1');
+            const savedText2 = localStorage.getItem('text2');
+            if (savedText1) textInput1.value = savedText1;
+            if (savedText2) textInput2.value = savedText2;
+        }
+
+        // Set up autosave timer
+        setInterval(saveToLocalStorage, 30000); // Autosave every 30 seconds
+
+        // Export to JSON file
+        function exportToJson() {
+            const data = {
+                text1: textInput1.value,
+                text2: textInput2.value,
+                timestamp: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'text-comparison-' + new Date().toISOString().slice(0,10) + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Show success message
+            alert('File has been successfully downloaded!');
+        }
+
+        // Import from JSON file
+        function importFromJson(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        textInput1.value = data.text1 || '';
+                        textInput2.value = data.text2 || '';
+                        updateComparison();
+                        updateLineCounts();
+                        alert('File has been successfully imported!');
+                    } catch (error) {
+                        alert('Error importing file: Invalid format');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // Default content for demonstration
+        const defaultText1 = `Oudheidkundige Dienst in Nederlandsch-Indie : Oudheidkundig Verslag 1912
+Uitgegeven door het, bataviaasch genootschap van kunsten en wetenschappen
+Weltevreden - Albrecht & Co; 'S Hage - M. Nijhoff
+
+Oudheidkundig Verslag over het Eerste kwartaal 1912
+Ingevolge machtiging van den Directeur van Onderwijs en Eeredienst dd. 16 Februari 1912 No. 2565 is een wijziging gebracht in de samenstelling der driemaandelijksche.`.trim();
+
+        const defaultText2 = `Archaeological Service in the Netherlands Indies : Archaeological Report 1912
+Published by the Batavian Society of Arts and Sciences
+Weltevreden – Albrecht & Co; The Hague – M. Nijhoff
+
+Archaeological Report for the First Quarter of 1912
+Pursuant to the authorization of the Director of Education and Religious Affairs, dated 16 February 1912, No. 2565, a modification has been made in the composition of the quarterly [reports].`;
+
+        // Utility to escape HTML to prevent rendering tags from input
+        function escapeHtml(text) {
+            return text
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        // Function to update the comparison view
+        function updateComparison() {
+            const lines1 = textInput1.value.split('\\n');
+            const lines2 = textInput2.value.split('\\n');
+            
+            const maxLines = Math.max(lines1.length, lines2.length);
+            
+            let tableHTML = '<table class="w-full table-fixed text-sm border-collapse">';
+            tableHTML += `
+                <thead class="bg-gray-100 text-left">
+                    <tr>
+                        <th class="p-2 w-12 font-semibold text-gray-600 text-right">#</th>
+                        <th class="p-2 font-semibold text-gray-600 border-l border-gray-200">Text 1</th>
+                        <th class="p-2 font-semibold text-gray-600 border-l border-gray-200">Text 2</th>
+                    </tr>
+                </thead>
+            `;
+            
+            tableHTML += '<tbody>';
+            for (let i = 0; i < maxLines; i++) {
+                const line1 = lines1[i] || '';
+                const line2 = lines2[i] || '';
+                const isDifferent = line1 !== line2;
+                
+                // Use a subtle background color for rows where lines are different
+                const rowClass = isDifferent ? 'bg-yellow-50' : 'bg-white';
+
+                // Split the line if it contains newlines
+                const subLines1 = line1.split('\n');
+                const subLines2 = line2.split('\n');
+                const maxSubLines = Math.max(subLines1.length, subLines2.length);
+
+                for (let j = 0; j < maxSubLines; j++) {
+                    const subLine1 = subLines1[j] || '';
+                    const subLine2 = subLines2[j] || '';
+                    const isDifferent = subLine1 !== subLine2;
+                    const rowClass = isDifferent ? 'bg-yellow-50' : 'bg-white';
+
+                    tableHTML += `
+                        <tr class="${rowClass} border-t border-gray-200">
+                            <td class="p-2 text-gray-400 text-right align-top w-[50px] flex-shrink-0">${i + j + 1}</td>
+                            <td class="p-2 border-l border-gray-200 mono-font break-words whitespace-pre-wrap overflow-wrap-anywhere">${escapeHtml(subLine1)}</td>
+                            <td class="p-2 border-l border-gray-200 mono-font break-words whitespace-pre-wrap overflow-wrap-anywhere">${escapeHtml(subLine2)}</td>
+                        </tr>
+                    `;
+                }
+                i += maxSubLines - 1;
+            }
+            tableHTML += '</tbody></table>';
+            
+            comparisonOutput.innerHTML = tableHTML;
+        }
+
+        // Set initial content and render the comparison
+        textInput1.value = defaultText1;
+        textInput2.value = defaultText2;
+        updateComparison();
+        updateLineCounts();
+
+        // Function to update line counts
+        function updateLineCounts() {
+            const lines1 = textInput1.value.replace(/\r\n/g, '\n').split('\n');
+            const lines2 = textInput2.value.replace(/\r\n/g, '\n').split('\n');
+            
+            // Remove empty lines at the end for accurate count
+            while (lines1.length > 0 && lines1[lines1.length - 1] === '') lines1.pop();
+            while (lines2.length > 0 && lines2[lines2.length - 1] === '') lines2.pop();
+            
+            lineCount1.textContent = `Lines: ${lines1.length}`;
+            lineCount2.textContent = `Lines: ${lines2.length}`;
+        }
+
+        // Floating preview functionality
+        const floatingPreview = document.getElementById('floatingPreview');
+        const previewText1 = document.getElementById('previewText1');
+        const previewText2 = document.getElementById('previewText2');
+        const previewLineNumber = document.getElementById('previewLineNumber');
+        let previewTimeout;
+
+        function updateFloatingPreview(textarea) {
+            const isTextarea1 = textarea === textInput1;
+            const otherTextarea = isTextarea1 ? textInput2 : textInput1;
+            
+            // Get cursor position and current line
+            const cursorPosition = textarea.selectionStart;
+            const text = textarea.value;
+            const lines = text.split('\n');
+            let currentLine = 0;
+            let charCount = 0;
+            
+            // Find the current line number
+            for (let i = 0; i < lines.length; i++) {
+                if (charCount + lines[i].length + 1 > cursorPosition) {
+                    currentLine = i;
+                    break;
+                }
+                charCount += lines[i].length + 1;
+            }
+
+            // Get the corresponding lines from both textareas
+            const line1 = isTextarea1 ? lines[currentLine] : otherTextarea.value.split('\n')[currentLine];
+            const line2 = isTextarea1 ? otherTextarea.value.split('\n')[currentLine] : lines[currentLine];
+
+            // Update the preview
+            previewLineNumber.textContent = (currentLine + 1).toString();
+            previewText1.textContent = line1 || '';
+            previewText2.textContent = line2 || '';
+
+            // Show the preview
+            floatingPreview.classList.remove('hidden');
+            floatingPreview.classList.add('visible');
+
+            // Hide the preview after 2 seconds of inactivity
+            clearTimeout(previewTimeout);
+            previewTimeout = setTimeout(() => {
+                floatingPreview.classList.remove('visible');
+                setTimeout(() => floatingPreview.classList.add('hidden'), 200);
+            }, 2000);
+        }
+
+        // Add input and selection event listeners for the preview
+        textInput1.addEventListener('input', () => updateFloatingPreview(textInput1));
+        textInput2.addEventListener('input', () => updateFloatingPreview(textInput2));
+        textInput1.addEventListener('click', () => updateFloatingPreview(textInput1));
+        textInput2.addEventListener('click', () => updateFloatingPreview(textInput2));
+        textInput1.addEventListener('keyup', () => updateFloatingPreview(textInput1));
+        textInput2.addEventListener('keyup', () => updateFloatingPreview(textInput2));
+
+        // Add event listeners to update the comparison and line counts on input
+        textInput1.addEventListener('input', () => {
+            updateComparison();
+            updateLineCounts();
+            saveToLocalStorage();
+        });
+        textInput2.addEventListener('input', () => {
+            updateComparison();
+            updateLineCounts();
+            saveToLocalStorage();
+        });
+
+        // Function to toggle input boxes visibility
+        function toggleInputs() {
+            const inputContainer = document.getElementById('inputContainer');
+            if (inputContainer.style.display === 'none') {
+                inputContainer.style.display = 'grid';
+            } else {
+                inputContainer.style.display = 'none';
+            }
+        }
+
+        // Load saved content on startup
+        loadFromLocalStorage();
+        updateComparison();
+        updateLineCounts();
+    </script>
+
+</body>
+</html>
