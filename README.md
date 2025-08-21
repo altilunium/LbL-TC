@@ -8,4 +8,4 @@ Line-by-Line Text Comparison
 
 ### Sample
 * [Batavian Society of Arts and Sciences - Archaeological Report for the First Quarter of 1912](https://altilunium.github.io/LbL-TC/sample/1912-Q1/)
-* 
+* [Batavian Society of Arts and Sciences - Archaeological Report for the Second Quarter of 1912](https://altilunium.github.io/LbL-TC/sample/1912-Q2/)
